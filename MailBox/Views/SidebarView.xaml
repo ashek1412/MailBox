@@ -1,0 +1,151 @@
+<UserControl x:Class="MailBox.Views.SidebarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MailBox.ViewModels"
+             Background="White">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="Auto"/>  <!-- Compose button -->
+            <RowDefinition Height="*"/>     <!-- Account list -->
+            <RowDefinition Height="Auto"/>  <!-- Bottom actions -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="16,12">
+            <TextBlock Text="📬 MailBox" FontSize="18" FontWeight="Bold" Foreground="#2563EB"/>
+        </Border>
+
+        <!-- Compose -->
+        <Button Grid.Row="1" Margin="12,10"
+                Style="{StaticResource PrimaryButton}" Padding="16,10"
+                Command="{Binding DataContext.ComposeNewCommand,
+                          RelativeSource={RelativeSource AncestorType=Window}}">
+            <TextBlock Text="✏  Compose" Foreground="White" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+        </Button>
+
+        <!-- Account list -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding AccountItems}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:AccountItemViewModel}">
+                        <StackPanel>
+                            <!-- Row 1: chevron + name/email (no avatar) -->
+                            <Grid Margin="4,4,4,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>   <!-- tight chevron -->
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Expand chevron -->
+                                <Button Grid.Column="0"
+                                        Content="{Binding IsExpanded, Converter={StaticResource BoolToChevron}}"
+                                        Style="{StaticResource IconButton}" Width="20" Height="20"
+                                        FontSize="11" Padding="0"
+                                        Command="{Binding ToggleExpandCommand}"/>
+
+                                <!-- Name + email -->
+                                <Button Grid.Column="1" Style="{StaticResource SidebarItem}" Padding="2,2"
+                                        Command="{Binding ToggleExpandCommand}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Account.Name}" FontWeight="SemiBold" FontSize="13"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Account.Email}" FontSize="11" Foreground="#6B7280"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <!-- Row 2: sync status text + action icons -->
+                            <Grid Margin="24,0,4,4">
+                                <TextBlock Text="{Binding LastSyncText}" FontSize="10" Foreground="#9CA3AF"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                            VerticalAlignment="Center">
+                                    <!-- Unread badge -->
+                                    <Border Background="#2563EB" CornerRadius="10" Padding="5,1" Margin="0,0,2,0"
+                                            Visibility="{Binding TotalUnread, Converter={StaticResource UnreadBadgeVisibility}}">
+                                        <TextBlock Text="{Binding TotalUnread}" Foreground="White"
+                                                   FontSize="10" FontWeight="Bold"/>
+                                    </Border>
+                                    <!-- Sync (hidden while syncing, shows spinner) -->
+                                    <Button Content="↺" Style="{StaticResource IconButton}" Width="24" Height="24"
+                                            Command="{Binding SyncCommand}" ToolTip="Sync"
+                                            Visibility="{Binding IsSyncing, Converter={StaticResource InverseBoolToVisibility}}"/>
+                                    <TextBlock Text="⟳" FontSize="13" Foreground="#2563EB" Width="24"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding IsSyncing, Converter={StaticResource BoolToVisibility}}"/>
+                                    <Button Content="⚙" Style="{StaticResource IconButton}" Width="24" Height="24"
+                                            Command="{Binding EditCommand}" ToolTip="Settings"/>
+                                    <Button Content="🗑" Style="{StaticResource IconButton}" Width="24" Height="24"
+                                            Command="{Binding DeleteCommand}" ToolTip="Remove"
+                                            FontFamily="Segoe UI Emoji"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Connection error (shown when IMAP fails) -->
+                            <Border Margin="8,0,8,4" CornerRadius="6" Padding="10,7"
+                                    Background="#FEF2F2"
+                                    Visibility="{Binding ConnectionError, Converter={StaticResource StringToVisibility}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⚠ " FontFamily="Segoe UI Emoji" FontSize="12"
+                                               Foreground="#DC2626" VerticalAlignment="Top"/>
+                                    <TextBlock Text="{Binding ConnectionError}" FontSize="11"
+                                               Foreground="#DC2626" TextWrapping="Wrap"
+                                               MaxWidth="180"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Folder list (shown when expanded) -->
+                            <ItemsControl ItemsSource="{Binding Folders}" Margin="40,0,0,0"
+                                          Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:FolderItemViewModel}">
+                                        <Button Style="{StaticResource SidebarItem}"
+                                                Command="{Binding SelectCommand}" HorizontalContentAlignment="Left">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Folder.Icon}" FontFamily="Segoe UI Emoji"
+                                                           Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Folder.Name}" VerticalAlignment="Center"/>
+                                                <Border Background="#EFF6FF" CornerRadius="8" Padding="5,1" Margin="6,0,0,0"
+                                                        Visibility="{Binding UnreadCount, Converter={StaticResource UnreadBadgeVisibility}}">
+                                                    <TextBlock Text="{Binding UnreadCount}"
+                                                               Foreground="#2563EB" FontSize="10" FontWeight="Bold"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Bottom: Add Account + Logs + Backup / Restore -->
+        <StackPanel Grid.Row="3" Margin="8,4,8,8">
+            <Separator Background="#E5E7EB" Margin="0,0,0,4"/>
+            <Button Content="+ Add Account" Style="{StaticResource SidebarItem}"
+                    Command="{Binding AddAccountCommand}" HorizontalContentAlignment="Left"
+                    Padding="10,8"/>
+            <Button Content="📋 Mail Logs" Style="{StaticResource SidebarItem}"
+                    Command="{Binding OpenLogsCommand}" HorizontalContentAlignment="Left"
+                    Padding="10,8"/>
+            <Separator Background="#E5E7EB" Margin="4,4"/>
+            <Button Content="📤  Export Contacts" Style="{StaticResource SidebarItem}"
+                    HorizontalContentAlignment="Left" Padding="10,8"
+                    Command="{Binding DataContext.ExportContactsCommand,
+                              RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <Separator Background="#E5E7EB" Margin="4,4"/>
+            <Button Content="💾  Backup Data" Style="{StaticResource SidebarItem}"
+                    HorizontalContentAlignment="Left" Padding="10,8"
+                    Command="{Binding DataContext.BackupCommand,
+                              RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <Button Content="📥  Restore Backup" Style="{StaticResource SidebarItem}"
+                    HorizontalContentAlignment="Left" Padding="10,8"
+                    Command="{Binding DataContext.RestoreCommand,
+                              RelativeSource={RelativeSource AncestorType=Window}}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

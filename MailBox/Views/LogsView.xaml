@@ -1,0 +1,199 @@
+<UserControl x:Class="MailBox.Views.LogsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="16,12">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="📋 Mail Logs" FontSize="15" FontWeight="SemiBold" Foreground="#111827"/>
+                    <TextBlock Text="Connection, send &amp; receive activity"
+                               FontSize="12" Foreground="#6B7280" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Content="🗑 Clear" Style="{StaticResource SecondaryButton}"
+                        Padding="10,5" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Command="{Binding ClearLogsCommand}" FontFamily="Segoe UI Emoji"/>
+            </Grid>
+        </Border>
+
+        <!-- Filters -->
+        <Border Grid.Row="1" Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <Grid>
+                <!-- Type filter pills -->
+                <StackPanel Orientation="Horizontal">
+                    <Border CornerRadius="6" BorderBrush="#E5E7EB" BorderThickness="1"
+                            Background="White" Padding="2" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="All"        GroupName="type" IsChecked="True"
+                                         Tag="all"        Click="TypeFilter_Click" Style="{StaticResource FilterPill}"/>
+                            <RadioButton Content="Connection" GroupName="type"
+                                         Tag="connection" Click="TypeFilter_Click" Style="{StaticResource FilterPill}"/>
+                            <RadioButton Content="Send"       GroupName="type"
+                                         Tag="send"       Click="TypeFilter_Click" Style="{StaticResource FilterPill}"/>
+                            <RadioButton Content="Receive"    GroupName="type"
+                                         Tag="receive"    Click="TypeFilter_Click" Style="{StaticResource FilterPill}"/>
+                        </StackPanel>
+                    </Border>
+                    <!-- Status filter -->
+                    <Border CornerRadius="6" BorderBrush="#E5E7EB" BorderThickness="1"
+                            Background="White" Padding="2">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="All"     GroupName="status" IsChecked="True"
+                                         Tag="all"     Click="StatusFilter_Click" Style="{StaticResource FilterPill}"/>
+                            <RadioButton Content="✓ Success" GroupName="status"
+                                         Tag="success" Click="StatusFilter_Click" Style="{StaticResource FilterPill}"/>
+                            <RadioButton Content="✗ Error"   GroupName="status"
+                                         Tag="error"   Click="StatusFilter_Click" Style="{StaticResource FilterPill}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center"
+                           FontSize="11" Foreground="#9CA3AF">
+                    <Run Text="{Binding Total, Mode=OneWay}"/>
+                    <Run Text=" record(s)"/>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- Table -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Logs}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderBrush="#F3F4F6" BorderThickness="0,0,0,1"
+                                Padding="12,8">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsError}" Value="True">
+                                            <Setter Property="Background" Value="#FFF5F5"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="{Binding FormattedTime}"
+                                           FontSize="11" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AccountName}" FontSize="12"
+                                               FontWeight="Medium" Foreground="#111827"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="130"/>
+                                    <TextBlock Text="{Binding AccountEmail}" FontSize="11"
+                                               Foreground="#9CA3AF" TextTrimming="CharacterEllipsis"
+                                               MaxWidth="130"/>
+                                </StackPanel>
+                                <!-- Type badge -->
+                                <Border Grid.Column="2" CornerRadius="10" Padding="8,2"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#F3F4F6"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Type}" Value="connection">
+                                                    <Setter Property="Background" Value="#F5F3FF"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="send">
+                                                    <Setter Property="Background" Value="#EFF6FF"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Type}" Value="receive">
+                                                    <Setter Property="Background" Value="#F0FDF4"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding Type}" FontSize="11" FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#6B7280"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Type}" Value="connection">
+                                                        <Setter Property="Foreground" Value="#7C3AED"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Type}" Value="send">
+                                                        <Setter Property="Foreground" Value="#2563EB"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Type}" Value="receive">
+                                                        <Setter Property="Foreground" Value="#16A34A"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                                <!-- Status badge -->
+                                <Border Grid.Column="3" CornerRadius="10" Padding="8,2"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#DCFCE7"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock FontSize="11" FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text"       Value="✓ Success"/>
+                                                <Setter Property="Foreground" Value="#16A34A"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                        <Setter Property="Text"       Value="✗ Error"/>
+                                                        <Setter Property="Foreground" Value="#DC2626"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                                <!-- Message -->
+                                <TextBlock Grid.Column="4" Text="{Binding Message}"
+                                           FontSize="12" Foreground="#374151" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
+                                           ToolTip="{Binding Message}"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Pagination -->
+        <Border Grid.Row="3" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Padding="12,6">
+            <Grid>
+                <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="#6B7280">
+                    <Run Text="Page "/>
+                    <Run Text="{Binding Page, Mode=OneWay}"/>
+                    <Run Text=" of "/>
+                    <Run Text="{Binding TotalPages, Mode=OneWay}"/>
+                </TextBlock>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="‹ Prev" Style="{StaticResource SecondaryButton}" Padding="10,5"
+                            Command="{Binding PrevPageCommand}"/>
+                    <Button Content="Next ›" Style="{StaticResource SecondaryButton}" Padding="10,5"
+                            Margin="6,0,0,0" Command="{Binding NextPageCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

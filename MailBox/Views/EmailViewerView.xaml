@@ -1,0 +1,133 @@
+<UserControl x:Class="MailBox.Views.EmailViewerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:vm="clr-namespace:MailBox.ViewModels"
+             Background="#F9FAFB">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Toolbar -->
+            <RowDefinition Height="Auto"/>  <!-- Email meta -->
+            <RowDefinition Height="*"/>     <!-- Body -->
+            <RowDefinition Height="Auto"/>  <!-- Attachments -->
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1"
+                Padding="16,10">
+            <Grid>
+                <TextBlock Text="{Binding Email.Subject}" FontSize="15" FontWeight="SemiBold"
+                           Foreground="#111827" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Margin="0,0,200,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Style="{StaticResource PrimaryButton}"
+                            Padding="12,6" Command="{Binding ReplyCommand}">
+                        <TextBlock Text="↩ Reply" Foreground="White" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                    </Button>
+                    <Button Content="⟳ Forward" Style="{StaticResource SecondaryButton}"
+                            Padding="12,6" Margin="8,0,0,0" Command="{Binding ForwardCommand}"/>
+                    <Button Content="⭐" Style="{StaticResource IconButton}" Width="32" Height="32"
+                            Margin="8,0,0,0" ToolTip="Flag / Unflag"
+                            Command="{Binding ToggleFlagCommand}" FontFamily="Segoe UI Emoji"/>
+                    <Button Content="🗑" Style="{StaticResource IconButton}" Width="32" Height="32"
+                            ToolTip="Delete" Command="{Binding DeleteCommand}"
+                            FontFamily="Segoe UI Emoji"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Email meta -->
+        <Border Grid.Row="1" Background="White" BorderBrush="#F3F4F6" BorderThickness="0,0,0,1"
+                Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Avatar -->
+                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19"
+                        Background="#DBEAFE" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding Email.AvatarLetter}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontWeight="Bold" FontSize="16" Foreground="#1D4ED8"/>
+                </Border>
+
+                <!-- From / To / Date -->
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Email.DisplaySender}"
+                                   FontWeight="SemiBold" FontSize="14" Foreground="#111827"/>
+                        <TextBlock Foreground="#9CA3AF" FontSize="12" Margin="8,1,0,0"
+                                   VerticalAlignment="Bottom">
+                            <Run Text="&lt;"/><Run Text="{Binding Email.FromEmail, Mode=OneWay}"/><Run Text="&gt;"/>
+                        </TextBlock>
+                    </StackPanel>
+                    <TextBlock FontSize="12" Foreground="#6B7280" Margin="0,3,0,0">
+                        <Run FontWeight="Medium" Text="To: "/>
+                        <Run Text="{Binding Email.ToAddresses, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding Email.SentAt, Converter={StaticResource DateToString}}"
+                               FontSize="11" Foreground="#9CA3AF" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Body — WebView2 -->
+        <wv2:WebView2 Grid.Row="2" x:Name="BodyWebView"
+                      NavigationStarting="WebView_NavigationStarting"/>
+
+        <!-- Shown only when the WebView2 browser fails to initialize -->
+        <TextBlock Grid.Row="2" x:Name="WebViewErrorText" Visibility="Collapsed"
+                   Margin="24" TextWrapping="Wrap" FontSize="13" Foreground="#B91C1C"/>
+
+        <!-- Attachments -->
+        <Border Grid.Row="3" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0"
+                Padding="16,10"
+                Visibility="{Binding Attachments.Count, Converter={StaticResource IntToVisibility}}">
+            <StackPanel>
+                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#6B7280" Margin="0,0,0,8">
+                    <Run Text="📎 "/>
+                    <Run Text="{Binding Attachments.Count, Mode=OneWay}"/>
+                    <Run Text=" Attachment(s)"/>
+                </TextBlock>
+                <ItemsControl ItemsSource="{Binding Attachments}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8"
+                                    Padding="10,8" Margin="0,0,8,0" Cursor="Hand"
+                                    Background="White">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick"
+                                        Command="{Binding DataContext.OpenAttachmentCommand,
+                                                  RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"/>
+                                </Border.InputBindings>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="📄" FontFamily="Segoe UI Emoji"
+                                               FontSize="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Filename}" FontSize="12"
+                                                   FontWeight="Medium" Foreground="#111827"
+                                                   MaxWidth="140" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding FormattedSize}" FontSize="11"
+                                                   Foreground="#9CA3AF"/>
+                                    </StackPanel>
+                                    <Button Content="⬇" Style="{StaticResource IconButton}"
+                                            Width="26" Height="26" Margin="6,0,0,0"
+                                            FontFamily="Segoe UI Emoji"
+                                            Command="{Binding DataContext.SaveAttachmentCommand,
+                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

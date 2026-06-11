@@ -1,0 +1,29 @@
+# Build output
+bin/
+obj/
+publish/
+
+# VS / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+.nuget/
+packages/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs / runtime data
+logs/
+*.log
+
+# WebView2 user data (generated at runtime)
+EBWebView/

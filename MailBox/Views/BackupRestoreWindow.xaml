@@ -1,0 +1,47 @@
+<Window x:Class="MailBox.Views.BackupRestoreWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MailBox" Width="500" Height="230"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Background="White">
+    <Grid Margin="28,24,28,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Title -->
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>  <!-- Status text -->
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="Auto"/>  <!-- Progress bar -->
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>  <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Operation title -->
+        <TextBlock Grid.Row="0" x:Name="TitleText"
+                   FontSize="16" FontWeight="SemiBold" Foreground="#111827"/>
+
+        <!-- Status message -->
+        <TextBlock Grid.Row="2" x:Name="StatusText"
+                   FontSize="13" Foreground="#4B5563" TextWrapping="Wrap"/>
+
+        <!-- Progress bar -->
+        <Grid Grid.Row="4">
+            <ProgressBar x:Name="ProgressBar" Height="8"
+                         Minimum="0" Maximum="100" Value="0"
+                         Background="#F3F4F6"/>
+            <!-- Indeterminate overlay shown while running -->
+            <ProgressBar x:Name="IndeterminateBar" Height="8"
+                         IsIndeterminate="True" Background="Transparent"/>
+        </Grid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="OpenFolderBtn" Content="📂  Open Folder"
+                    Padding="14,8" Margin="0,0,8,0"
+                    Click="OpenFolder_Click" Visibility="Collapsed"
+                    Style="{StaticResource SecondaryButton}"/>
+            <Button x:Name="ActionBtn" Content="Cancel"
+                    Padding="16,8" Click="ActionBtn_Click"
+                    Style="{StaticResource SecondaryButton}"/>
+        </StackPanel>
+    </Grid>
+</Window>

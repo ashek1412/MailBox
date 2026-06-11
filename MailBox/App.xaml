@@ -1,0 +1,34 @@
+<Application x:Class="MailBox.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tb="http://www.hardcodet.net/taskbar"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Styles.xaml"/>
+                <ResourceDictionary Source="Themes/Converters.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <tb:TaskbarIcon x:Key="TrayIcon"
+                ToolTipText="MailBox"
+                IconSource="/Assets/mailbox.ico"
+                LeftClickCommand="{Binding ShowWindowCommand}">
+                <tb:TaskbarIcon.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open MailBox" FontWeight="SemiBold"
+                                  Command="{Binding ShowWindowCommand}"/>
+                        <MenuItem Header="Sync All Accounts" Command="{Binding SyncAllCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="Compose" Command="{Binding ComposeNewCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="💾  Backup Data…"    Command="{Binding BackupCommand}"/>
+                        <MenuItem Header="📥  Restore Backup…" Command="{Binding RestoreCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="Exit" Command="{Binding ExitCommand}"/>
+                    </ContextMenu>
+                </tb:TaskbarIcon.ContextMenu>
+            </tb:TaskbarIcon>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

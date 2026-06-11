@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>MailBox</AssemblyName>
+    <RootNamespace>MailBox</RootNamespace>
+    <ApplicationIcon>Assets\mailbox.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Company>MailBox</Company>
+    <Description>Self-hosted multi-account desktop email client</Description>
+    <!-- Single-file publish settings -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- IMAP / SMTP -->
+    <PackageReference Include="MailKit" Version="4.17.0" />
+    <!-- SQLite + Dapper -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
+    <PackageReference Include="Dapper" Version="2.1.79" />
+    <!-- MVVM -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <!-- DI + Background services -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+    <!-- HTML email rendering -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
+    <!-- System tray -->
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
+    <!-- HTML sanitizer (strip scripts/trackers from emails) -->
+    <PackageReference Include="HtmlSanitizer" Version="9.0.892" />
+    <!-- Logging -->
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Resource Include="Assets\mailbox.ico"/>
+  </ItemGroup>
+
+</Project>
