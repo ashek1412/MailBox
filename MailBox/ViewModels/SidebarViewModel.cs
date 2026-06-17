@@ -15,6 +15,7 @@ public partial class SidebarViewModel : ObservableObject
 
     [ObservableProperty] private ObservableCollection<AccountItemViewModel> _accountItems = new();
     [ObservableProperty] private AccountItemViewModel? _selectedAccount;
+    [ObservableProperty] private bool _showBottomMenu = false;
 
     public SidebarViewModel(AccountRepository accounts, ImapSyncService imap, MainViewModel main)
     {
@@ -42,7 +43,19 @@ public partial class SidebarViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleBottomMenu() => ShowBottomMenu = !ShowBottomMenu;
+
+    [RelayCommand]
     private void OpenLogs() => _main.OpenLogsCommand.Execute(null);
+
+    public void MoveAccount(int fromIndex, int toIndex)
+    {
+        if (fromIndex == toIndex) return;
+        var item = AccountItems[fromIndex];
+        AccountItems.RemoveAt(fromIndex);
+        AccountItems.Insert(toIndex, item);
+        _accounts.UpdateSortOrders(AccountItems.Select((a, i) => (a.Account.Id, i)));
+    }
 
     internal async Task RefreshCurrentAsync()
     {
@@ -114,6 +127,14 @@ public partial class AccountItemViewModel : ObservableObject
         ConnectionError = "";
         try
         {
+            // Reload sync state from DB so any reset/external change is picked up
+            var fresh = _accounts.GetById(Account.Id);
+            if (fresh != null)
+            {
+                Account.SyncStateJson   = fresh.SyncStateJson;
+                Account.InitialSyncDone = fresh.InitialSyncDone;
+            }
+
             var svc = new ImapSyncService(_accounts);
             svc.Progress += msg => System.Windows.Application.Current.Dispatcher.InvokeAsync(
                 () => _main.StatusMessage = msg);

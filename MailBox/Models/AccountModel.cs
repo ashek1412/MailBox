@@ -20,6 +20,7 @@ public class AccountModel
     public string? LastSyncedAt    { get; set; }
     public string? SyncError       { get; set; }
     public int    InitialSyncDone  { get; set; } = 0;
+    public int    SortOrder        { get; set; } = 0;
 
     public string DisplayName => string.IsNullOrEmpty(Name) ? Email : $"{Name} <{Email}>";
 

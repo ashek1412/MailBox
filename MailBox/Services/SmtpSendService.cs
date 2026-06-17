@@ -83,7 +83,11 @@ public class SmtpSendService
 
         msg.Body = builder.ToMessageBody();
 
-        using var client = new SmtpClient();
+        using var client = new SmtpClient
+        {
+            CheckCertificateRevocation = false,
+            ServerCertificateValidationCallback = (s, c, h, e) => true,
+        };
         var ssl = account.SmtpEncryption.ToLower() switch
         {
             "ssl"  => SecureSocketOptions.SslOnConnect,

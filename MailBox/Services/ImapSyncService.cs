@@ -372,6 +372,8 @@ public class ImapSyncService
         var client = new ImapClient
         {
             Timeout = 60_000,   // 60 s — generous for high-latency connections
+            CheckCertificateRevocation = false,
+            ServerCertificateValidationCallback = (s, c, h, e) => true,
         };
         try
         {
@@ -455,7 +457,12 @@ public class ImapSyncService
         if (msg.Contains("SSL",         StringComparison.OrdinalIgnoreCase) ||
             msg.Contains("certificate", StringComparison.OrdinalIgnoreCase) ||
             msg.Contains("handshake",   StringComparison.OrdinalIgnoreCase))
-            return $"SSL/TLS error. Make sure encryption is set to 'ssl' and port is 993. Details: {msg}";
+        {
+            var inner = ex.InnerException?.Message ?? "";
+            var inner2 = ex.InnerException?.InnerException?.Message ?? "";
+            var detail = string.Join(" → ", new[] { msg, inner, inner2 }.Where(s => !string.IsNullOrEmpty(s)));
+            return $"SSL/TLS error. Make sure encryption is set to 'ssl' and port is 993. Details: {detail}";
+        }
 
         if (msg.Contains("IMAP access is disabled", StringComparison.OrdinalIgnoreCase))
             return "IMAP is disabled on this account. For Gmail, go to Settings → See all settings → Forwarding and POP/IMAP → Enable IMAP.";

@@ -161,11 +161,16 @@
                     </ItemsControl>
                 </WrapPanel>
 
-                <!-- Test connection -->
+                <!-- Test connection + reset sync -->
                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                     <Button Content="Test IMAP Connection" Padding="12,6"
                             Command="{Binding TestConnectionCommand}"
                             Style="{StaticResource LinkButton}"/>
+                    <Button Content="Reset sync state" Padding="12,6" Margin="8,0,0,0"
+                            Command="{Binding ResetSyncCommand}"
+                            Style="{StaticResource LinkButton}"
+                            Foreground="#EF4444"
+                            Visibility="{Binding IsEdit, Converter={StaticResource BoolToVisibility}}"/>
                     <TextBlock Text="{Binding TestResult}" VerticalAlignment="Center" Margin="8,0,0,0"
                                Foreground="{Binding TestResult, Converter={StaticResource TestResultColor}}"/>
                 </StackPanel>

@@ -26,44 +26,51 @@
 
         <!-- Account list -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding AccountItems}">
+            <ItemsControl x:Name="AccountList" ItemsSource="{Binding AccountItems}"
+                          AllowDrop="True" Drop="AccountList_Drop" DragOver="AccountList_DragOver">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:AccountItemViewModel}">
+                        <Border BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
                         <StackPanel>
-                            <!-- Row 1: chevron + name/email (no avatar) -->
+                            <!-- Row 1: drag-handle + chevron + name/email -->
                             <Grid Margin="4,4,4,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="20"/>   <!-- tight chevron -->
+                                    <ColumnDefinition Width="16"/>   <!-- drag handle -->
+                                    <ColumnDefinition Width="20"/>   <!-- chevron -->
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
+                                <!-- Drag handle -->
+                                <TextBlock Grid.Column="0" Text="⠿" FontSize="13" Foreground="#9CA3AF"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           Cursor="SizeAll" ToolTip="Drag to reorder"
+                                           PreviewMouseLeftButtonDown="DragHandle_MouseDown"
+                                           MouseMove="DragHandle_MouseMove"
+                                           PreviewMouseLeftButtonUp="DragHandle_MouseUp"/>
+
                                 <!-- Expand chevron -->
-                                <Button Grid.Column="0"
+                                <Button Grid.Column="1"
                                         Content="{Binding IsExpanded, Converter={StaticResource BoolToChevron}}"
                                         Style="{StaticResource IconButton}" Width="20" Height="20"
                                         FontSize="11" Padding="0"
                                         Command="{Binding ToggleExpandCommand}"/>
 
-                                <!-- Name + email -->
-                                <Button Grid.Column="1" Style="{StaticResource SidebarItem}" Padding="2,2"
+                                <!-- Name only -->
+                                <Button Grid.Column="2" Style="{StaticResource SidebarItem}" Padding="2,2"
                                         Command="{Binding ToggleExpandCommand}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Account.Name}" FontWeight="SemiBold" FontSize="13"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Account.Email}" FontSize="11" Foreground="#6B7280"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
+                                    <TextBlock Text="{Binding Account.Name}" FontWeight="SemiBold" FontSize="13"
+                                               TextTrimming="CharacterEllipsis"/>
                                 </Button>
                             </Grid>
 
                             <!-- Row 2: sync status text + action icons -->
-                            <Grid Margin="24,0,4,4">
+                            <Grid Margin="40,0,4,4">
                                 <TextBlock Text="{Binding LastSyncText}" FontSize="10" Foreground="#9CA3AF"
                                            VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
                                     <!-- Unread badge -->
-                                    <Border Background="#2563EB" CornerRadius="10" Padding="5,1" Margin="0,0,2,0"
+                                    <Border Background="#2563EB" CornerRadius="10" Padding="5,2,5,0" Margin="0,0,2,0"
                                             Visibility="{Binding TotalUnread, Converter={StaticResource UnreadBadgeVisibility}}">
                                         <TextBlock Text="{Binding TotalUnread}" Foreground="White"
                                                    FontSize="10" FontWeight="Bold"/>
@@ -97,7 +104,7 @@
                             </Border>
 
                             <!-- Folder list (shown when expanded) -->
-                            <ItemsControl ItemsSource="{Binding Folders}" Margin="40,0,0,0"
+                            <ItemsControl ItemsSource="{Binding Folders}" Margin="56,0,0,0"
                                           Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:FolderItemViewModel}">
@@ -107,7 +114,7 @@
                                                 <TextBlock Text="{Binding Folder.Icon}" FontFamily="Segoe UI Emoji"
                                                            Margin="0,0,6,0" VerticalAlignment="Center"/>
                                                 <TextBlock Text="{Binding Folder.Name}" VerticalAlignment="Center"/>
-                                                <Border Background="#EFF6FF" CornerRadius="8" Padding="5,1" Margin="6,0,0,0"
+                                                <Border Background="#EFF6FF" CornerRadius="8" Padding="5,2,5,0" Margin="6,0,0,0"
                                                         Visibility="{Binding UnreadCount, Converter={StaticResource UnreadBadgeVisibility}}">
                                                     <TextBlock Text="{Binding UnreadCount}"
                                                                Foreground="#2563EB" FontSize="10" FontWeight="Bold"/>
@@ -118,34 +125,49 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
 
-        <!-- Bottom: Add Account + Logs + Backup / Restore -->
+        <!-- Bottom: collapsible menu + toggle -->
         <StackPanel Grid.Row="3" Margin="8,4,8,8">
-            <Separator Background="#E5E7EB" Margin="0,0,0,4"/>
-            <Button Content="+ Add Account" Style="{StaticResource SidebarItem}"
-                    Command="{Binding AddAccountCommand}" HorizontalContentAlignment="Left"
-                    Padding="10,8"/>
-            <Button Content="📋 Mail Logs" Style="{StaticResource SidebarItem}"
-                    Command="{Binding OpenLogsCommand}" HorizontalContentAlignment="Left"
-                    Padding="10,8"/>
-            <Separator Background="#E5E7EB" Margin="4,4"/>
-            <Button Content="📤  Export Contacts" Style="{StaticResource SidebarItem}"
-                    HorizontalContentAlignment="Left" Padding="10,8"
-                    Command="{Binding DataContext.ExportContactsCommand,
-                              RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <Separator Background="#E5E7EB" Margin="4,4"/>
-            <Button Content="💾  Backup Data" Style="{StaticResource SidebarItem}"
-                    HorizontalContentAlignment="Left" Padding="10,8"
-                    Command="{Binding DataContext.BackupCommand,
-                              RelativeSource={RelativeSource AncestorType=Window}}"/>
-            <Button Content="📥  Restore Backup" Style="{StaticResource SidebarItem}"
-                    HorizontalContentAlignment="Left" Padding="10,8"
-                    Command="{Binding DataContext.RestoreCommand,
-                              RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <!-- Expandable menu items -->
+            <StackPanel Visibility="{Binding ShowBottomMenu, Converter={StaticResource BoolToVisibility}}">
+                <Separator Background="#E5E7EB" Margin="0,0,0,4"/>
+                <Button Content="+ Add Account" Style="{StaticResource SidebarItem}"
+                        Command="{Binding AddAccountCommand}" HorizontalContentAlignment="Left"
+                        Padding="10,8"/>
+                <Button Content="📋 Mail Logs" Style="{StaticResource SidebarItem}"
+                        Command="{Binding OpenLogsCommand}" HorizontalContentAlignment="Left"
+                        Padding="10,8"/>
+                <Separator Background="#E5E7EB" Margin="4,4"/>
+                <Button Content="📤  Export Contacts" Style="{StaticResource SidebarItem}"
+                        HorizontalContentAlignment="Left" Padding="10,8"
+                        Command="{Binding DataContext.ExportContactsCommand,
+                                  RelativeSource={RelativeSource AncestorType=Window}}"/>
+                <Separator Background="#E5E7EB" Margin="4,4"/>
+                <Button Content="💾  Backup Data" Style="{StaticResource SidebarItem}"
+                        HorizontalContentAlignment="Left" Padding="10,8"
+                        Command="{Binding DataContext.BackupCommand,
+                                  RelativeSource={RelativeSource AncestorType=Window}}"/>
+                <Button Content="📥  Restore Backup" Style="{StaticResource SidebarItem}"
+                        HorizontalContentAlignment="Left" Padding="10,8"
+                        Command="{Binding DataContext.RestoreCommand,
+                                  RelativeSource={RelativeSource AncestorType=Window}}"/>
+            </StackPanel>
+
+            <!-- Toggle button always visible -->
+            <Separator Background="#E5E7EB" Margin="0,4,0,0"/>
+            <Button Style="{StaticResource SidebarItem}" HorizontalContentAlignment="Left"
+                    Padding="10,6" Command="{Binding ToggleBottomMenuCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding ShowBottomMenu, Converter={StaticResource BoolToChevron}}"
+                               FontSize="11" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="More options" FontSize="12" Foreground="#6B7280" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </StackPanel>
     </Grid>
 </UserControl>

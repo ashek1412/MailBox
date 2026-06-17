@@ -36,6 +36,18 @@ public partial class MainViewModel : ObservableObject
 
         _imap.Progress += msg => StatusMessage = msg;
         _bgSync.NewMailArrived += OnNewMailArrived;
+
+        _ = StartAutoSyncLoopAsync();
+    }
+
+    private async Task StartAutoSyncLoopAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(30));
+        while (true)
+        {
+            try { await _bgSync.SyncAllAsync(); } catch { }
+            await Task.Delay(TimeSpan.FromMinutes(5));
+        }
     }
 
     // Called by SidebarViewModel when a folder is selected

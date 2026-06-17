@@ -147,6 +147,20 @@ public partial class AccountDialogViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ResetSync()
+    {
+        if (!IsEdit) return;
+        var result = System.Windows.MessageBox.Show(
+            "This clears the sync history for this account.\n\nAll emails will be re-downloaded on the next sync. Continue?",
+            "Reset Sync State",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning);
+        if (result != System.Windows.MessageBoxResult.Yes) return;
+        _accounts.UpdateSyncState(_editId!.Value, null, null, null, 0);
+        TestResult = "✓ Sync state reset — all mail re-downloads on next sync.";
+    }
+
+    [RelayCommand]
     private void SetColor(string hex) => Color = hex;
 
     [RelayCommand]

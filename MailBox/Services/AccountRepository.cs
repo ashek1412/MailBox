@@ -40,8 +40,17 @@ public class AccountRepository
                 sync_state_json   TEXT,
                 last_synced_at    TEXT,
                 sync_error        TEXT,
-                initial_sync_done INTEGER NOT NULL DEFAULT 0
+                initial_sync_done INTEGER NOT NULL DEFAULT 0,
+                sort_order        INTEGER NOT NULL DEFAULT 0
             )");
+
+        // Migration: add sort_order to existing databases
+        var cols = conn.Query<string>("SELECT name FROM pragma_table_info('accounts')").ToList();
+        if (!cols.Contains("sort_order"))
+        {
+            conn.Execute("ALTER TABLE accounts ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
+            conn.Execute("UPDATE accounts SET sort_order = id");
+        }
 
         conn.Execute(@"
             CREATE TABLE IF NOT EXISTS mail_logs (
@@ -72,7 +81,7 @@ public class AccountRepository
                    color, sync_state_json SyncStateJson,
                    last_synced_at LastSyncedAt, sync_error SyncError,
                    initial_sync_done InitialSyncDone
-            FROM accounts ORDER BY id").ToList();
+            FROM accounts ORDER BY sort_order ASC, id ASC").ToList();
     }
 
     public AccountModel? GetById(int id)
@@ -130,6 +139,16 @@ public class AccountRepository
                 initial_sync_done = @initialSyncDone
             WHERE id = @id",
             new { id, syncStateJson, lastSyncedAt, syncError, initialSyncDone });
+    }
+
+    public void UpdateSortOrders(IEnumerable<(int Id, int Order)> items)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+        foreach (var (id, order) in items)
+            conn.Execute("UPDATE accounts SET sort_order = @order WHERE id = @id",
+                new { id, order }, tx);
+        tx.Commit();
     }
 
     public void Delete(int id)
