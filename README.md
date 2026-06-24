@@ -30,7 +30,7 @@ A standalone WPF desktop email client for Windows, built with .NET 8. Ships as a
 
 ## Screenshots
 
-> _Add screenshots here_
+![Main window](docs/screenshots/main-window.png)
 
 ---
 
