@@ -81,6 +81,26 @@
         <TextBlock Grid.Row="2" x:Name="WebViewErrorText" Visibility="Collapsed"
                    Margin="24" TextWrapping="Wrap" FontSize="13" Foreground="#B91C1C"/>
 
+        <!-- Body not downloaded yet — shown instead of blank WebView -->
+        <Border Grid.Row="2" Background="White"
+                Visibility="{Binding BodyMissing, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="📭" FontSize="36" HorizontalAlignment="Center"
+                           FontFamily="Segoe UI Emoji"/>
+                <TextBlock Text="Body not downloaded" FontSize="14" FontWeight="SemiBold"
+                           Foreground="#374151" HorizontalAlignment="Center" Margin="0,10,0,4"/>
+                <TextBlock Text="Will appear automatically on next sync."
+                           FontSize="12" Foreground="#6B7280" HorizontalAlignment="Center"/>
+                <Button Content="Load now" Margin="0,14,0,0" Padding="16,7"
+                        Style="{StaticResource SecondaryButton}"
+                        Command="{Binding LoadBodyCommand}"
+                        IsEnabled="{Binding IsLoadingBody, Converter={StaticResource InverseBool}}"/>
+                <TextBlock Text="Fetching…" FontSize="12" Foreground="#6B7280"
+                           HorizontalAlignment="Center" Margin="0,8,0,0"
+                           Visibility="{Binding IsLoadingBody, Converter={StaticResource BoolToVisibility}}"/>
+            </StackPanel>
+        </Border>
+
         <!-- Attachments -->
         <Border Grid.Row="3" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0"
                 Padding="16,10"

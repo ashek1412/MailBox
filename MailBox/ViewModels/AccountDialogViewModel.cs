@@ -21,6 +21,8 @@ public partial class AccountDialogViewModel : ObservableObject
     [ObservableProperty] private string _username       = "";
     [ObservableProperty] private string _password       = "";
     [ObservableProperty] private string _color          = "#1a73e8";
+    [ObservableProperty] private string _proxyHost      = "";
+    [ObservableProperty] private int    _proxyPort      = 1080;
     [ObservableProperty] private string _testResult     = "";
     [ObservableProperty] private string _errorMessage   = "";
     [ObservableProperty] private bool   _isTesting      = false;
@@ -28,12 +30,6 @@ public partial class AccountDialogViewModel : ObservableObject
     public bool IsEdit => _editId.HasValue;
     public string Title => IsEdit ? "Edit Account" : "Add Email Account";
 
-    // Colour swatches shown in the form
-    public static readonly IReadOnlyList<string> ColorSwatches = new[]
-    {
-        "#1a73e8", "#e53935", "#43a047", "#fb8c00", "#8e24aa",
-        "#00acc1", "#6d4c41", "#546e7a", "#f4511e", "#0b8043",
-    };
 
     public event Action<bool>? RequestClose;
 
@@ -54,6 +50,8 @@ public partial class AccountDialogViewModel : ObservableObject
             SmtpEncryption = existing.SmtpEncryption;
             Username       = existing.Username;
             Color          = existing.Color;
+            ProxyHost      = existing.ProxyHost ?? "";
+            ProxyPort      = existing.ProxyPort > 0 ? existing.ProxyPort : 1080;
             // Password is not shown (re-enter to change)
         }
     }
@@ -87,6 +85,8 @@ public partial class AccountDialogViewModel : ObservableObject
                 ImapEncryption    = ImapEncryption,
                 Username          = Username,
                 EncryptedPassword = PasswordVault.Encrypt(Password),
+                ProxyHost         = string.IsNullOrWhiteSpace(ProxyHost) ? null : ProxyHost.Trim(),
+                ProxyPort         = string.IsNullOrWhiteSpace(ProxyHost) ? 0 : ProxyPort,
             };
             using var client = await ImapSyncService.ConnectAsync(temp);
             TestResult = "✓ Connection successful!";
@@ -123,6 +123,8 @@ public partial class AccountDialogViewModel : ObservableObject
             SmtpEncryption = SmtpEncryption,
             Username       = Username,
             Color          = Color,
+            ProxyHost      = string.IsNullOrWhiteSpace(ProxyHost) ? null : ProxyHost.Trim(),
+            ProxyPort      = string.IsNullOrWhiteSpace(ProxyHost) ? 0 : ProxyPort,
         };
 
         if (!string.IsNullOrWhiteSpace(Password))
@@ -159,9 +161,6 @@ public partial class AccountDialogViewModel : ObservableObject
         _accounts.UpdateSyncState(_editId!.Value, null, null, null, 0);
         TestResult = "✓ Sync state reset — all mail re-downloads on next sync.";
     }
-
-    [RelayCommand]
-    private void SetColor(string hex) => Color = hex;
 
     [RelayCommand]
     private void Cancel() => RequestClose?.Invoke(false);

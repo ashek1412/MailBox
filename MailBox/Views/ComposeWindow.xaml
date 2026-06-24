@@ -255,9 +255,10 @@
                         Command="{Binding AddAttachmentCommand}"
                         FontFamily="Segoe UI Emoji"/>
 
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="#DC2626" FontSize="12"
-                           VerticalAlignment="Center" HorizontalAlignment="Center"
-                           Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibility}}"/>
+                <TextBox Text="{Binding ErrorMessage, Mode=OneWay}" Foreground="#DC2626" FontSize="12"
+                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"
+                         Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibility}}"/>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Cancel" Style="{StaticResource SecondaryButton}"

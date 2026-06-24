@@ -75,6 +75,10 @@
                                         <TextBlock Text="{Binding TotalUnread}" Foreground="White"
                                                    FontSize="10" FontWeight="Bold"/>
                                     </Border>
+                                    <!-- Mark all as read -->
+                                    <Button Content="✓" Style="{StaticResource IconButton}" Width="24" Height="24"
+                                            Command="{Binding MarkAllAsReadCommand}" ToolTip="Mark all as read"
+                                            Visibility="{Binding TotalUnread, Converter={StaticResource UnreadBadgeVisibility}}"/>
                                     <!-- Sync (hidden while syncing, shows spinner) -->
                                     <Button Content="↺" Style="{StaticResource IconButton}" Width="24" Height="24"
                                             Command="{Binding SyncCommand}" ToolTip="Sync"

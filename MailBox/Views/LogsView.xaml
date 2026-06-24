@@ -167,10 +167,10 @@
                                     </TextBlock>
                                 </Border>
                                 <!-- Message -->
-                                <TextBlock Grid.Column="4" Text="{Binding Message}"
-                                           FontSize="12" Foreground="#374151" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
-                                           ToolTip="{Binding Message}"/>
+                                <TextBox Grid.Column="4" Text="{Binding Message, Mode=OneWay}"
+                                         FontSize="12" Foreground="#374151" VerticalAlignment="Center"
+                                         Margin="8,0,0,0"
+                                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                             </Grid>
                         </Border>
                     </DataTemplate>

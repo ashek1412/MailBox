@@ -19,8 +19,10 @@ public partial class EmailViewerViewModel : ObservableObject
     private EmailModel? _fullEmail;   // loaded with body_html/body_text for reply/forward
 
     [ObservableProperty] private ObservableCollection<AttachmentModel> _attachments = new();
-    [ObservableProperty] private string  _sanitizedHtml = "";
-    [ObservableProperty] private bool    _showHtml      = true;
+    [ObservableProperty] private string  _sanitizedHtml  = "";
+    [ObservableProperty] private bool    _showHtml       = true;
+    [ObservableProperty] private bool    _bodyMissing    = false;
+    [ObservableProperty] private bool    _isLoadingBody  = false;
 
     public EmailViewerViewModel(
         AccountModel account, EmailModel email,
@@ -44,22 +46,9 @@ public partial class EmailViewerViewModel : ObservableObject
         _fullEmail = full;
         if (full == null) return;
 
-        // Sanitize HTML before rendering in WebView2
-        var rawHtml = full.BodyHtml ?? "";
-        if (!string.IsNullOrEmpty(rawHtml))
-        {
-            var sanitizer = new Ganss.Xss.HtmlSanitizer();
-            sanitizer.AllowedAttributes.Add("style");
-            sanitizer.AllowedAttributes.Add("class");
-            sanitizer.AllowedSchemes.Add("data");
-            SanitizedHtml = sanitizer.Sanitize(rawHtml);
-            ShowHtml = true;
-        }
-        else
-        {
-            SanitizedHtml = $"<pre style='font-family:sans-serif;white-space:pre-wrap'>{System.Net.WebUtility.HtmlEncode(full.BodyText ?? "")}</pre>";
-            ShowHtml = true;
-        }
+        ApplyBody(full);
+        _pendingFetchEmail = full;
+        _pendingFetchRepo  = repo;
 
         // Mark as read in local DB, then refresh sidebar counters
         if (!Email.IsReadBool)
@@ -75,12 +64,70 @@ public partial class EmailViewerViewModel : ObservableObject
             Attachments.Add(att);
     }
 
+    private EmailModel? _pendingFetchEmail;
+    private MailDataRepository? _pendingFetchRepo;
+
+    private void ApplyBody(EmailModel full)
+    {
+        var rawHtml = full.BodyHtml ?? "";
+        if (!string.IsNullOrEmpty(rawHtml))
+        {
+            var sanitizer = new Ganss.Xss.HtmlSanitizer();
+            sanitizer.AllowedAttributes.Add("style");
+            sanitizer.AllowedAttributes.Add("class");
+            sanitizer.AllowedSchemes.Add("data");
+            SanitizedHtml = sanitizer.Sanitize(rawHtml);
+            BodyMissing = false;
+        }
+        else if (!string.IsNullOrEmpty(full.BodyText))
+        {
+            SanitizedHtml = $"<pre style='font-family:sans-serif;white-space:pre-wrap'>{System.Net.WebUtility.HtmlEncode(full.BodyText)}</pre>";
+            BodyMissing = false;
+        }
+        else
+        {
+            SanitizedHtml = "";
+            BodyMissing = true;
+        }
+        ShowHtml = true;
+    }
+
+    [RelayCommand]
+    private async Task LoadBody()
+    {
+        if (_pendingFetchEmail == null || _pendingFetchRepo == null) return;
+        IsLoadingBody = true;
+        await FetchBodyAsync(_pendingFetchEmail, _pendingFetchRepo);
+        IsLoadingBody = false;
+    }
+
+    private async Task FetchBodyAsync(EmailModel email, MailDataRepository repo)
+    {
+        try
+        {
+            var (bodyHtml, bodyText) = await _imap.FetchBodyOnDemandAsync(
+                _account, email.Folder, email.Uid);
+            email.BodyHtml = bodyHtml;
+            email.BodyText = bodyText;
+            repo.UpdateBody(email.Id, bodyHtml, bodyText);
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => ApplyBody(email));
+        }
+        catch (Exception ex)
+        {
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                SanitizedHtml = $"<html><body style='font-family:Segoe UI,sans-serif;font-size:13px;color:#EF4444;padding:20px'>" +
+                                $"Could not fetch email body: {System.Net.WebUtility.HtmlEncode(ex.Message)}</body></html>";
+            });
+        }
+    }
+
     [RelayCommand]
     private void Reply()
     {
         var all     = _accounts.GetAll();
         var compose = new ComposeViewModel(_account, all, _accounts, _smtp, ComposeMode.Reply,
-            _fullEmail ?? Email, afterSendCallback: _main.SyncAll, main: _main);
+            _fullEmail ?? Email, afterSendCallback: _main.SyncAllSilent, main: _main);
         new Views.ComposeWindow(compose).Show();
     }
 
@@ -89,7 +136,7 @@ public partial class EmailViewerViewModel : ObservableObject
     {
         var all     = _accounts.GetAll();
         var compose = new ComposeViewModel(_account, all, _accounts, _smtp, ComposeMode.Forward,
-            _fullEmail ?? Email, afterSendCallback: _main.SyncAll, main: _main);
+            _fullEmail ?? Email, afterSendCallback: _main.SyncAllSilent, main: _main);
         new Views.ComposeWindow(compose).Show();
     }
 

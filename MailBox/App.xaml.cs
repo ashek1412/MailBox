@@ -49,6 +49,15 @@ public partial class App : Application
         // Ensure %APPDATA%\MailBox\ directories exist
         AppPaths.EnsureAll();
 
+        // Register AUMID so WinRT toast notifications appear in Action Center
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
+                @"SOFTWARE\Classes\AppUserModelId\MailBox.Desktop");
+            key.SetValue("DisplayName", "MailBox");
+        }
+        catch { }
+
         // Build DI host
         _host = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
@@ -57,6 +66,7 @@ public partial class App : Application
                 services.AddSingleton<ImapSyncService>();
                 services.AddSingleton<SmtpSendService>();
                 services.AddSingleton<BackgroundSyncService>();
+                services.AddHostedService(p => p.GetRequiredService<BackgroundSyncService>());
                 services.AddSingleton<MainViewModel>();
                 services.AddSingleton<MainWindow>();
             })

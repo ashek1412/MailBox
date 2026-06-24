@@ -175,9 +175,28 @@ public partial class AccountItemViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void MarkAllAsRead()
+    {
+        var result = System.Windows.MessageBox.Show(
+            $"Mark all emails in {Account.Email} as read?",
+            "Mark All as Read",
+            System.Windows.MessageBoxButton.OKCancel,
+            System.Windows.MessageBoxImage.Question);
+        if (result != System.Windows.MessageBoxResult.OK) return;
+        try
+        {
+            new MailDataRepository(Account.Email).MarkAllAsRead();
+            RefreshUnread();
+            if (_main.EmailList.HasSelection) _main.EmailList.Reload();
+        }
+        catch { }
+    }
+
+    [RelayCommand]
     private void Edit()
     {
-        var dlg = new Views.AccountDialog(Account, _accounts);
+        var fresh = _accounts.GetById(Account.Id) ?? Account;
+        var dlg = new Views.AccountDialog(fresh, _accounts);
         dlg.ShowDialog();
     }
 
@@ -222,6 +241,10 @@ public partial class AccountItemViewModel : ObservableObject
         catch (Exception ex)
         {
             ConnectionError = ImapSyncService.HintMessage(ex, Account);
+            // If we have no folders loaded yet, show what's cached in SQLite so the
+            // user can still browse locally downloaded mail while offline.
+            if (Folders.Count == 0)
+                LoadFoldersFromCache();
             return;
         }
 
@@ -281,6 +304,32 @@ public partial class AccountItemViewModel : ObservableObject
             Folders.Add(new FolderItemViewModel(
                 new FolderInfo { FullName = "Trash", Name = "Trash", Icon = "🗑",
                     UnreadCount = localRepo.GetFolderCount("Trash") },
+                Account, _main));
+        }
+    }
+
+    private void LoadFoldersFromCache()
+    {
+        var repo = new MailDataRepository(Account.Email);
+        var dbFolders = repo.GetDistinctFolders();
+
+        // Always guarantee at least INBOX so the user can browse even with zero mail
+        if (dbFolders.Count == 0)
+            dbFolders.Add("INBOX");
+
+        Folders.Clear();
+        foreach (var fullName in dbFolders)
+        {
+            var name   = System.IO.Path.GetFileName(fullName);
+            if (string.IsNullOrEmpty(name)) name = fullName;
+            Folders.Add(new FolderItemViewModel(
+                new FolderInfo
+                {
+                    FullName    = fullName,
+                    Name        = name,
+                    Icon        = FolderInfo.IconFor(fullName),
+                    UnreadCount = repo.GetUnreadCount(fullName),
+                },
                 Account, _main));
         }
     }

@@ -113,6 +113,33 @@ public class MailDataRepository
             new { folder, uid });
     }
 
+    public void UpdateBody(int emailId, string? bodyHtml, string? bodyText)
+    {
+        using var conn = Open();
+        conn.Execute("UPDATE emails SET body_html = @bodyHtml, body_text = @bodyText WHERE id = @emailId",
+            new { emailId, bodyHtml, bodyText });
+    }
+
+    public void UpdateBodyByUid(string folder, int uid, string? bodyHtml, string? bodyText)
+    {
+        using var conn = Open();
+        conn.Execute("UPDATE emails SET body_html = @bodyHtml, body_text = @bodyText WHERE folder = @folder AND uid = @uid",
+            new { folder, uid, bodyHtml, bodyText });
+    }
+
+    // Returns UIDs of emails stored without body content (synced on restricted network)
+    public List<int> GetBodylessUids(string folder, int limit = 50)
+    {
+        using var conn = Open();
+        return conn.Query<int>(@"
+            SELECT uid FROM emails
+            WHERE folder = @folder
+              AND (body_html IS NULL OR body_html = '')
+              AND (body_text IS NULL OR body_text = '')
+            LIMIT @limit",
+            new { folder, limit }).ToList();
+    }
+
     public bool ExistsByUid(string folder, int uid)
     {
         using var conn = Open();
@@ -171,6 +198,12 @@ public class MailDataRepository
                 new { r = isRead ? 1 : 0, folder, uid });
     }
 
+    public void MarkAllAsRead()
+    {
+        using var conn = Open();
+        conn.Execute("UPDATE emails SET is_read = 1 WHERE is_read = 0");
+    }
+
     public void SetFlagged(string folder, int uid, bool flagged)
     {
         using var conn = Open();
@@ -227,6 +260,13 @@ public class MailDataRepository
         using var conn = Open();
         return conn.ExecuteScalar<int>(
             "SELECT COUNT(*) FROM emails WHERE folder=@folder", new { folder });
+    }
+
+    public List<string> GetDistinctFolders()
+    {
+        using var conn = Open();
+        return conn.Query<string>(
+            "SELECT DISTINCT folder FROM emails ORDER BY folder").ToList();
     }
 
     /// Total unread across ALL folders (for the account-level badge).

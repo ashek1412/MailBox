@@ -44,7 +44,10 @@ public partial class ComposeViewModel : ObservableObject
         MainViewModel? main = null)
     {
         Accounts           = allAccounts.Count > 0 ? allAccounts : new[] { account };
-        _selectedAccount   = account;
+        // Match by Id so SelectedItem hits the same instance that's in the Accounts list.
+        // Using the raw `account` param fails because it's a different object than what
+        // GetAll() returned, so the ComboBox would show blank even though the Id matches.
+        _selectedAccount   = allAccounts.FirstOrDefault(a => a.Id == account.Id) ?? account;
         _accounts          = accounts;
         _smtp              = smtp;
         _afterSendCallback = afterSendCallback;
@@ -59,7 +62,9 @@ public partial class ComposeViewModel : ObservableObject
 
         if (mode == ComposeMode.Reply && replyTo != null)
         {
-            To         = replyTo.FromEmail ?? "";
+            To         = string.IsNullOrEmpty(replyTo.FromName)
+                            ? replyTo.FromEmail ?? ""
+                            : $"{replyTo.FromName} <{replyTo.FromEmail}>";
             Subject    = "Re: " + System.Text.RegularExpressions.Regex.Replace(replyTo.Subject, @"^(Re:\s*)+", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             _inReplyTo = replyTo.MessageId ?? "";
             Body       = BuildQuote(replyTo);

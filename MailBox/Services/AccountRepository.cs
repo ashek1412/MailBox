@@ -41,16 +41,22 @@ public class AccountRepository
                 last_synced_at    TEXT,
                 sync_error        TEXT,
                 initial_sync_done INTEGER NOT NULL DEFAULT 0,
-                sort_order        INTEGER NOT NULL DEFAULT 0
+                sort_order        INTEGER NOT NULL DEFAULT 0,
+                proxy_host        TEXT,
+                proxy_port        INTEGER NOT NULL DEFAULT 0
             )");
 
-        // Migration: add sort_order to existing databases
+        // Migrations for existing databases
         var cols = conn.Query<string>("SELECT name FROM pragma_table_info('accounts')").ToList();
         if (!cols.Contains("sort_order"))
         {
             conn.Execute("ALTER TABLE accounts ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
             conn.Execute("UPDATE accounts SET sort_order = id");
         }
+        if (!cols.Contains("proxy_host"))
+            conn.Execute("ALTER TABLE accounts ADD COLUMN proxy_host TEXT");
+        if (!cols.Contains("proxy_port"))
+            conn.Execute("ALTER TABLE accounts ADD COLUMN proxy_port INTEGER NOT NULL DEFAULT 0");
 
         conn.Execute(@"
             CREATE TABLE IF NOT EXISTS mail_logs (
@@ -80,7 +86,8 @@ public class AccountRepository
                    username, encrypted_password EncryptedPassword,
                    color, sync_state_json SyncStateJson,
                    last_synced_at LastSyncedAt, sync_error SyncError,
-                   initial_sync_done InitialSyncDone
+                   initial_sync_done InitialSyncDone,
+                   proxy_host ProxyHost, proxy_port ProxyPort
             FROM accounts ORDER BY sort_order ASC, id ASC").ToList();
     }
 
@@ -94,7 +101,8 @@ public class AccountRepository
                    username, encrypted_password EncryptedPassword,
                    color, sync_state_json SyncStateJson,
                    last_synced_at LastSyncedAt, sync_error SyncError,
-                   initial_sync_done InitialSyncDone
+                   initial_sync_done InitialSyncDone,
+                   proxy_host ProxyHost, proxy_port ProxyPort
             FROM accounts WHERE id = @id", new { id });
     }
 
@@ -103,9 +111,11 @@ public class AccountRepository
         using var conn = Open();
         return conn.ExecuteScalar<int>(@"
             INSERT INTO accounts (name, email, imap_host, imap_port, imap_encryption,
-                smtp_host, smtp_port, smtp_encryption, username, encrypted_password, color)
+                smtp_host, smtp_port, smtp_encryption, username, encrypted_password, color,
+                proxy_host, proxy_port)
             VALUES (@Name, @Email, @ImapHost, @ImapPort, @ImapEncryption,
-                @SmtpHost, @SmtpPort, @SmtpEncryption, @Username, @EncryptedPassword, @Color);
+                @SmtpHost, @SmtpPort, @SmtpEncryption, @Username, @EncryptedPassword, @Color,
+                @ProxyHost, @ProxyPort);
             SELECT last_insert_rowid()", a);
     }
 
@@ -124,7 +134,9 @@ public class AccountRepository
                 smtp_encryption   = @SmtpEncryption,
                 username          = @Username,
                 encrypted_password= @EncryptedPassword,
-                color             = @Color
+                color             = @Color,
+                proxy_host        = @ProxyHost,
+                proxy_port        = @ProxyPort
             WHERE id = @Id", a);
     }
 

@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string  _statusMessage = "";
     [ObservableProperty] private bool    _isBusy        = false;
 
+
     public MainViewModel(
         AccountRepository accounts,
         ImapSyncService   imap,
@@ -34,20 +35,17 @@ public partial class MainViewModel : ObservableObject
         Sidebar    = new SidebarViewModel(accounts, imap, this);
         RightPanel = null;
 
-        _imap.Progress += msg => StatusMessage = msg;
-        _bgSync.NewMailArrived += OnNewMailArrived;
-
-        _ = StartAutoSyncLoopAsync();
-    }
-
-    private async Task StartAutoSyncLoopAsync()
-    {
-        await Task.Delay(TimeSpan.FromSeconds(30));
-        while (true)
+        _bgSync.AccountProgress += (email, msg) =>
+            System.Windows.Application.Current.Dispatcher.InvokeAsync(
+                () => StatusMessage = $"⟳ {email} — {msg}");
+        _bgSync.NewMailArrived  += OnNewMailArrived;
+        EmailList.EmailsDeleted += account =>
         {
-            try { await _bgSync.SyncAllAsync(); } catch { }
-            await Task.Delay(TimeSpan.FromMinutes(5));
-        }
+            Sidebar.AccountItems.FirstOrDefault(a => a.Account.Id == account.Id)
+                   ?.RefreshTrashCount();
+            Sidebar.RefreshUnreadCountFor(account);
+        };
+
     }
 
     // Called by SidebarViewModel when a folder is selected
@@ -76,18 +74,25 @@ public partial class MainViewModel : ObservableObject
     {
         IsBusy = true;
         StatusMessage = "Syncing all accounts…";
-        try { await _bgSync.SyncAllAsync(); }
-        finally
-        {
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                IsBusy = false;
-                StatusMessage = "";
-            });
-        }
+        try   { await _bgSync.SyncAllAsync(); }
+        catch { }
+        finally { IsBusy = false; StatusMessage = ""; }
 
         await Sidebar.RefreshCurrentAsync();
-        EmailList.Reload();
+        if (EmailList.HasSelection)
+            EmailList.Reload();
+        else if (Sidebar.AccountItems.Count > 0)
+            EmailList.LoadEmails(Sidebar.AccountItems[0].Account, "INBOX");
+    }
+
+    internal async Task SyncAllSilent()
+    {
+        try { await _bgSync.SyncAllAsync(); } catch { }
+        await Sidebar.RefreshCurrentAsync();
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            if (EmailList.HasSelection) EmailList.Reload();
+        });
     }
 
     private void OnNewMailArrived(AccountModel account, int count)
@@ -95,9 +100,54 @@ public partial class MainViewModel : ObservableObject
         System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
         {
             Sidebar.RefreshUnreadCountFor(account);
-            EmailList.Reload();
+            if (EmailList.HasSelection)
+                EmailList.Reload();
+            else
+                EmailList.LoadEmails(account, "INBOX");
             StatusMessage = $"📬 {count} new email(s) in {account.Name}";
         });
+
+        Task.Run(() => ShowNewMailNotifications(account, count));
+    }
+
+    private static void ShowNewMailNotifications(AccountModel account, int count)
+    {
+        Services.NotificationService.PlaySound();
+
+        try
+        {
+            if (count > 3)
+            {
+                Services.NotificationService.ShowToast(
+                    $"📬 {count} new emails",
+                    $"Account: {account.Email}");
+                return;
+            }
+
+            var repo = new Services.MailDataRepository(account.Email);
+            var (emails, _) = repo.GetEmails("INBOX", "", 1, count);
+
+            if (emails.Count == 0)
+            {
+                // Fallback — DB query returned nothing (e.g. mail in non-INBOX folder)
+                Services.NotificationService.ShowToast(
+                    $"📬 {count} new email(s)",
+                    $"Account: {account.Email}");
+                return;
+            }
+
+            foreach (var email in emails)
+                Services.NotificationService.ShowToast(
+                    $"📧 New mail — {account.Email}",
+                    $"From: {email.DisplaySender}",
+                    email.Subject ?? "(no subject)");
+        }
+        catch
+        {
+            Services.NotificationService.ShowToast(
+                $"📬 {count} new email(s)",
+                $"Account: {account.Email}");
+        }
     }
 
     [RelayCommand]
@@ -114,7 +164,7 @@ public partial class MainViewModel : ObservableObject
         if (all.Count == 0) return;
         var initial = Sidebar.AccountItems.FirstOrDefault()?.Account ?? all[0];
         var compose = new ComposeViewModel(initial, all, _accounts, _smtp,
-            afterSendCallback: SyncAll, main: this);
+            afterSendCallback: SyncAllSilent, main: this);
         new Views.ComposeWindow(compose).Show();
     }
 

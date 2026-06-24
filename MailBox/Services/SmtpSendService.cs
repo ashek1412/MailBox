@@ -1,6 +1,7 @@
 using MailBox.Models;
 using MailKit;
 using MailKit.Net.Imap;
+using MailKit.Net.Proxy;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
@@ -85,9 +86,12 @@ public class SmtpSendService
 
         using var client = new SmtpClient
         {
+            Timeout = 60_000,   // 60 s — VPN connections need more headroom than direct
             CheckCertificateRevocation = false,
             ServerCertificateValidationCallback = (s, c, h, e) => true,
         };
+        if (account.HasProxy)
+            client.ProxyClient = new Socks5Client(account.ProxyHost!, account.ProxyPort);
         var ssl = account.SmtpEncryption.ToLower() switch
         {
             "ssl"  => SecureSocketOptions.SslOnConnect,
@@ -95,13 +99,34 @@ public class SmtpSendService
             _      => SecureSocketOptions.None,
         };
 
-        await client.ConnectAsync(account.SmtpHost.Trim(), account.SmtpPort, ssl, ct);
-        var password = PasswordVault.Decrypt(account.EncryptedPassword);
-        await client.AuthenticateAsync(account.Username.Trim(), password, ct);
-        await client.SendAsync(msg, ct);
-        await client.DisconnectAsync(true, ct);
+        try
+        {
+            await client.ConnectAsync(account.SmtpHost.Trim(), account.SmtpPort, ssl, ct);
+            var password = PasswordVault.Decrypt(account.EncryptedPassword);
+            await client.AuthenticateAsync(account.Username.Trim(), password, ct);
+            await client.SendAsync(msg, ct);
+            await client.DisconnectAsync(true, ct);
+        }
+        catch (Exception ex)
+        {
+            var hint = SmtpHintMessage(ex, account);
+            _accounts.InsertLog(new MailLogModel
+            {
+                AccountId    = account.Id,
+                AccountEmail = account.Email,
+                AccountName  = account.Name,
+                Type         = "send",
+                Status       = "error",
+                Message      = $"SMTP failed to {req.To}: {hint}",
+            });
+            throw new Exception(hint, ex);
+        }
 
-        await AppendToSentAsync(account, msg, ct);
+        // Best-effort append to server Sent folder — runs with its own short timeout
+        // so a blocked IMAP port doesn't freeze the UI after a successful send.
+        using var appendCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        appendCts.CancelAfter(TimeSpan.FromSeconds(20));
+        await AppendToSentAsync(account, msg, appendCts.Token);
 
         _accounts.InsertLog(new MailLogModel
         {
@@ -112,6 +137,56 @@ public class SmtpSendService
             Status       = "success",
             Message      = $"Sent to {req.To} — {req.Subject}",
         });
+    }
+
+    private static string SmtpHintMessage(Exception ex, AccountModel account)
+    {
+        var msg = ex.Message;
+
+        if (msg.Contains("AUTHENTICATIONFAILED", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("Invalid credentials",  StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("535",                  StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("Username and Password", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("LOGIN failed",          StringComparison.OrdinalIgnoreCase))
+        {
+            if (account.SmtpHost.Contains("gmail", StringComparison.OrdinalIgnoreCase))
+                return "Gmail authentication failed. Use an App Password — not your regular Gmail password. " +
+                       "Go to myaccount.google.com → Security → App Passwords.";
+            if (account.SmtpHost.Contains("outlook", StringComparison.OrdinalIgnoreCase) ||
+                account.SmtpHost.Contains("office365", StringComparison.OrdinalIgnoreCase))
+                return "Outlook authentication failed. If MFA is enabled use an App Password, " +
+                       "and ensure SMTP AUTH is enabled in Outlook settings.";
+            return $"SMTP authentication failed — wrong username or password. {msg}";
+        }
+
+        if (msg.Contains("Connection refused",   StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("No connection could",  StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("actively refused",     StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("timed out",            StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("TimedOut",             StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("Operation was cancelled", StringComparison.OrdinalIgnoreCase))
+            return msg.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+                   msg.Contains("TimedOut",  StringComparison.OrdinalIgnoreCase) ||
+                   msg.Contains("Operation was cancelled", StringComparison.OrdinalIgnoreCase)
+                ? $"Connection timed out to {account.SmtpHost}:{account.SmtpPort}. " +
+                  "The connection is being blocked — check your firewall or network restrictions. " +
+                  "If on a restricted network, configure a SOCKS5 proxy in account settings."
+                : $"Cannot reach {account.SmtpHost}:{account.SmtpPort}. " +
+                  "Check the hostname and port (587 for STARTTLS, 465 for SSL). " +
+                  "Also verify SMTP AUTH is enabled on the mail server.";
+
+        if (msg.Contains("SSL",         StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("certificate", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("handshake",   StringComparison.OrdinalIgnoreCase))
+        {
+            var inner  = ex.InnerException?.Message ?? "";
+            var inner2 = ex.InnerException?.InnerException?.Message ?? "";
+            var detail = string.Join(" → ", new[] { msg, inner, inner2 }.Where(s => !string.IsNullOrEmpty(s)));
+            return $"SSL/TLS error connecting to {account.SmtpHost}. " +
+                   $"Try switching encryption or port. Details: {detail}";
+        }
+
+        return msg;
     }
 }
 

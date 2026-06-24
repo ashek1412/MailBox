@@ -2,6 +2,7 @@ using System.IO;
 using MailBox.Models;
 using MailKit;
 using MailKit.Net.Imap;
+using MailKit.Net.Proxy;
 using MailKit.Search;
 using MailKit.Security;
 using MimeKit;
@@ -23,8 +24,9 @@ public class ImapSyncService
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    public async Task<SyncResult> SyncAsync(AccountModel account, CancellationToken ct = default)
+    public async Task<SyncResult> SyncAsync(AccountModel account, CancellationToken ct = default, Action<string>? progress = null)
     {
+        void Report(string msg) { if (progress != null) progress(msg); else Progress?.Invoke(msg); }
         // First sync for this account — delete any stale database left over from a
         // previous add/delete cycle so every message is re-downloaded from scratch.
         if (account.InitialSyncDone == 0)
@@ -55,8 +57,8 @@ public class ImapSyncService
                 Message      = $"IMAP connection failed: {errMsg}",
             });
             _accounts.UpdateSyncState(account.Id, account.SyncStateJson,
-                account.LastSyncedAt, errMsg, 0);
-            Progress?.Invoke($"Connection failed: {errMsg}");
+                account.LastSyncedAt, errMsg, account.InitialSyncDone);
+            Report($"Connection failed: {errMsg}");
             return new SyncResult(0, 0, 0, 1, errMsg);
         }
 
@@ -88,7 +90,7 @@ public class ImapSyncService
 
                 try
                 {
-                    Progress?.Invoke($"Syncing {folder.FullName}…");
+                    Report($"Syncing {folder.FullName}…");
                     var (dl, sk) = await SyncFolderAsync(account, repo, client, folder, ct);
                     stats[0]++;
                     stats[1] += dl;
@@ -145,7 +147,7 @@ public class ImapSyncService
             Message      = $"Sync complete — {stats[1]} new, {stats[2]} skipped, {stats[3]} errors",
         });
 
-        Progress?.Invoke("Sync complete.");
+        Report("Sync complete.");
         return new SyncResult(stats[0], stats[1], stats[2], stats[3], firstError);
     }
 
@@ -221,9 +223,41 @@ public class ImapSyncService
             }
         }
 
+        // Re-fetch body content for emails that were previously stored without it
+        // (e.g. initial sync on a restricted network where body downloads timed out).
+        // Reuses the already-open folder connection — no extra handshake cost.
+        await RefetchBodylessAsync(repo, folder, ct);
+
         await folder.CloseAsync(false, ct);
         if (maxUid > lastUid) account.SetSyncedUid(folder.FullName, maxUid);
         return (downloaded, skipped);
+    }
+
+    private static async Task RefetchBodylessAsync(
+        MailDataRepository repo, IMailFolder folder, CancellationToken ct)
+    {
+        var uids = repo.GetBodylessUids(folder.FullName, limit: 50)
+                       .Select(u => new UniqueId((uint)u)).ToList();
+        if (uids.Count == 0) return;
+
+        try
+        {
+            var summaries = await folder.FetchAsync(uids,
+                MessageSummaryItems.UniqueId | MessageSummaryItems.BodyStructure, ct);
+
+            foreach (var summary in summaries)
+            {
+                ct.ThrowIfCancellationRequested();
+                try
+                {
+                    var (html, text) = await FetchBodyPartsAsync(folder, summary, ct);
+                    if (!string.IsNullOrEmpty(html) || !string.IsNullOrEmpty(text))
+                        repo.UpdateBodyByUid(folder.FullName, (int)summary.UniqueId.Id, html, text);
+                }
+                catch { }
+            }
+        }
+        catch { }
     }
 
     // Stores one email from its IMAP summary — downloads body text only, not attachment files.
@@ -327,6 +361,68 @@ public class ImapSyncService
         }
     }
 
+    // Fetches just the body text/HTML for one email — much faster than GetMessageAsync
+    // because it skips attachment data entirely.
+    public async Task<(string? BodyHtml, string? BodyText)> FetchBodyOnDemandAsync(
+        AccountModel account, string folderName, int uid, CancellationToken ct = default)
+    {
+        using var client = await ConnectAsync(account, ct);
+        var folder = await client.GetFolderAsync(folderName, ct);
+        await folder.OpenAsync(FolderAccess.ReadOnly, ct);
+
+        var uniqueId = new UniqueId((uint)uid);
+        var summaries = await folder.FetchAsync(
+            new[] { uniqueId },
+            MessageSummaryItems.UniqueId | MessageSummaryItems.BodyStructure, ct);
+
+        var summary = summaries.FirstOrDefault();
+        (string? html, string? text) result = (null, null);
+        if (summary != null)
+            result = await FetchBodyPartsAsync(folder, summary, ct);
+
+        await folder.CloseAsync(false, ct);
+        await client.DisconnectAsync(true, ct);
+        return result;
+    }
+
+    // Fetches HTML then text body parts from an already-open folder — skips attachments.
+    private static async Task<(string? Html, string? Text)> FetchBodyPartsAsync(
+        IMailFolder folder, IMessageSummary summary, CancellationToken ct)
+    {
+        string? html = null, text = null;
+
+        if (summary.HtmlBody != null)
+        {
+            try
+            {
+                var part = await folder.GetBodyPartAsync(summary.UniqueId, summary.HtmlBody, ct) as TextPart;
+                html = part?.Text;
+            }
+            catch { }
+        }
+        if (string.IsNullOrEmpty(html) && summary.TextBody != null)
+        {
+            try
+            {
+                var part = await folder.GetBodyPartAsync(summary.UniqueId, summary.TextBody, ct) as TextPart;
+                text = part?.Text;
+            }
+            catch { }
+        }
+        // Fallback: download full message only if body parts unavailable
+        if (string.IsNullOrEmpty(html) && string.IsNullOrEmpty(text))
+        {
+            try
+            {
+                var msg = await folder.GetMessageAsync(summary.UniqueId, ct);
+                html = msg.HtmlBody;
+                text = msg.TextBody;
+            }
+            catch { }
+        }
+        return (html, text);
+    }
+
     // Downloads all attachment files for one email from IMAP and saves them to disk.
     public async Task DownloadAttachmentsAsync(
         AccountModel account, EmailModel email, MailDataRepository repo, CancellationToken ct = default)
@@ -371,10 +467,12 @@ public class ImapSyncService
     {
         var client = new ImapClient
         {
-            Timeout = 60_000,   // 60 s — generous for high-latency connections
+            Timeout = 120_000,  // 120 s — VPN/China connections need extra headroom
             CheckCertificateRevocation = false,
             ServerCertificateValidationCallback = (s, c, h, e) => true,
         };
+        if (account.HasProxy)
+            client.ProxyClient = new Socks5Client(account.ProxyHost!, account.ProxyPort);
         try
         {
             var ssl = account.ImapEncryption.ToLower() switch
@@ -446,13 +544,15 @@ public class ImapSyncService
             msg.Contains("No connection could", StringComparison.OrdinalIgnoreCase) ||
             msg.Contains("actively refused",    StringComparison.OrdinalIgnoreCase))
             return $"Connection refused at {account.ImapHost}:{account.ImapPort}. " +
-                   $"Check the hostname and port (993 for SSL, 143 for STARTTLS).";
+                   "Check the hostname and port (993 for SSL, 143 for STARTTLS). " +
+                   "Also verify IMAP is enabled on the mail server.";
 
         if (msg.Contains("timed out",    StringComparison.OrdinalIgnoreCase) ||
             msg.Contains("TimedOut",     StringComparison.OrdinalIgnoreCase) ||
             msg.Contains("did not receive a greeting", StringComparison.OrdinalIgnoreCase))
             return $"Connection timed out to {account.ImapHost}:{account.ImapPort}. " +
-                   "Check the hostname, port, and whether a firewall is blocking the connection.";
+                   "The connection is being blocked — check your firewall or network restrictions. " +
+                   "If on a restricted network, configure a SOCKS5 proxy in account settings.";
 
         if (msg.Contains("SSL",         StringComparison.OrdinalIgnoreCase) ||
             msg.Contains("certificate", StringComparison.OrdinalIgnoreCase) ||

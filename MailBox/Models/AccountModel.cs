@@ -21,6 +21,10 @@ public class AccountModel
     public string? SyncError       { get; set; }
     public int    InitialSyncDone  { get; set; } = 0;
     public int    SortOrder        { get; set; } = 0;
+    public string? ProxyHost       { get; set; }
+    public int    ProxyPort        { get; set; } = 0;
+
+    public bool HasProxy => !string.IsNullOrWhiteSpace(ProxyHost) && ProxyPort > 0;
 
     public string DisplayName => string.IsNullOrEmpty(Name) ? Email : $"{Name} <{Email}>";
 

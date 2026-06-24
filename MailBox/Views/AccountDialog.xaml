@@ -20,8 +20,9 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- Quick presets -->
-                <TextBlock Text="QUICK SETUP" FontSize="11" Foreground="#6B7280"
-                           FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBox Text="QUICK SETUP" FontSize="11" Foreground="#6B7280"
+                         FontWeight="SemiBold" Margin="0,0,0,6"
+                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                 <WrapPanel Margin="0,0,0,16">
                     <Button Content="Gmail"   Margin="0,0,6,6" Padding="12,6"
                             Command="{Binding ApplyPresetCommand}" CommandParameter="gmail"
@@ -38,19 +39,22 @@
                 </WrapPanel>
 
                 <!-- Basic info -->
-                <TextBlock Text="Display Name *" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="Display Name *" FontSize="12" Foreground="#4B5563"
+                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource FieldBox}" Margin="0,4,0,12"/>
 
-                <TextBlock Text="Email Address *" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="Email Address *" FontSize="12" Foreground="#4B5563"
+                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                 <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource FieldBox}" Margin="0,4,0,16"/>
 
                 <!-- IMAP -->
                 <Border Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="INCOMING MAIL (IMAP)" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="#6B7280" Margin="0,0,0,8"/>
+                        <TextBox Text="INCOMING MAIL (IMAP)" FontSize="11" FontWeight="SemiBold"
+                                 Foreground="#6B7280" Margin="0,0,0,8"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -58,17 +62,21 @@
                                 <ColumnDefinition Width="80"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="Host" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="Host" FontSize="12" Foreground="#4B5563"
+                                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                                 <TextBox Text="{Binding ImapHost, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource FieldBox}" Margin="0,4,0,0"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="Port" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="Port" FontSize="12" Foreground="#4B5563"
+                                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                                 <TextBox Text="{Binding ImapPort, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource FieldBox}" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="Encryption" Style="{StaticResource FieldLabel}" Margin="0,8,0,4"/>
+                        <TextBox Text="Encryption" FontSize="12" Foreground="#4B5563"
+                                 Margin="0,8,0,4"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                         <ComboBox SelectedValue="{Binding ImapEncryption, Mode=TwoWay}"
                                   SelectedValuePath="Tag"
                                   Style="{StaticResource FieldCombo}">
@@ -82,8 +90,9 @@
                 <!-- SMTP -->
                 <Border Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="OUTGOING MAIL (SMTP)" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="#6B7280" Margin="0,0,0,8"/>
+                        <TextBox Text="OUTGOING MAIL (SMTP)" FontSize="11" FontWeight="SemiBold"
+                                 Foreground="#6B7280" Margin="0,0,0,8"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -91,17 +100,21 @@
                                 <ColumnDefinition Width="80"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="Host" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="Host" FontSize="12" Foreground="#4B5563"
+                                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                                 <TextBox Text="{Binding SmtpHost, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource FieldBox}" Margin="0,4,0,0"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="Port" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="Port" FontSize="12" Foreground="#4B5563"
+                                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                                 <TextBox Text="{Binding SmtpPort, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource FieldBox}" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="Encryption" Style="{StaticResource FieldLabel}" Margin="0,8,0,4"/>
+                        <TextBox Text="Encryption" FontSize="12" Foreground="#4B5563"
+                                 Margin="0,8,0,4"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                         <ComboBox SelectedValue="{Binding SmtpEncryption, Mode=TwoWay}"
                                   SelectedValuePath="Tag"
                                   Style="{StaticResource FieldCombo}">
@@ -109,6 +122,38 @@
                             <ComboBoxItem Tag="ssl"  Content="SSL / TLS  (port 465)"/>
                             <ComboBoxItem Tag="none" Content="None        (not recommended)"/>
                         </ComboBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- SOCKS5 Proxy (optional) -->
+                <Border Background="#F3F4F6" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBox Text="SOCKS5 PROXY (OPTIONAL)" FontSize="11" FontWeight="SemiBold"
+                                 Foreground="#6B7280" Margin="0,0,0,4"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
+                        <TextBox Text="Route all connections via VPN proxy. Leave blank for direct connection."
+                                 FontSize="11" Foreground="#9CA3AF" Margin="0,0,0,8"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"
+                                 TextWrapping="Wrap"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBox Text="Host (e.g. 127.0.0.1)" FontSize="12" Foreground="#4B5563"
+                                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
+                                <TextBox Text="{Binding ProxyHost, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldBox}" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBox Text="Port" FontSize="12" Foreground="#4B5563"
+                                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
+                                <TextBox Text="{Binding ProxyPort, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldBox}" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -120,46 +165,20 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Username *" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="Username *" FontSize="12" Foreground="#4B5563"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                         <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource FieldBox}" Margin="0,4,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2">
-                        <TextBlock Style="{StaticResource FieldLabel}"
-                                   Text="{Binding IsEdit, Converter={StaticResource SaveButtonText},
-                                          ConverterParameter=password}"/>
+                        <TextBox Text="{Binding IsEdit, Converter={StaticResource SaveButtonText},
+                                        ConverterParameter=password, Mode=OneWay}"
+                                 FontSize="12" Foreground="#4B5563"
+                                 IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                         <PasswordBox x:Name="PasswordBox" Style="{StaticResource FieldPassword}" Margin="0,4,0,0"
                                      PasswordChanged="PasswordBox_PasswordChanged"/>
                     </StackPanel>
                 </Grid>
-
-                <!-- Accent colour -->
-                <TextBlock Text="Accent Color" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
-                <WrapPanel>
-                    <Border Width="36" Height="36" CornerRadius="18" Margin="0,0,8,0" Cursor="Hand">
-                        <Border.Background>
-                            <SolidColorBrush Color="{Binding Color, Converter={StaticResource StringToColor}}"/>
-                        </Border.Background>
-                    </Border>
-                    <ItemsControl ItemsSource="{Binding ColorSwatches}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Width="24" Height="24" CornerRadius="12" Margin="0,0,6,0"
-                                        Cursor="Hand" Background="{Binding Converter={StaticResource HexToBrush}}">
-                                    <Border.InputBindings>
-                                        <MouseBinding MouseAction="LeftClick"
-                                            Command="{Binding DataContext.SetColorCommand,
-                                                      RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"/>
-                                    </Border.InputBindings>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </WrapPanel>
 
                 <!-- Test connection + reset sync -->
                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
@@ -171,14 +190,16 @@
                             Style="{StaticResource LinkButton}"
                             Foreground="#EF4444"
                             Visibility="{Binding IsEdit, Converter={StaticResource BoolToVisibility}}"/>
-                    <TextBlock Text="{Binding TestResult}" VerticalAlignment="Center" Margin="8,0,0,0"
-                               Foreground="{Binding TestResult, Converter={StaticResource TestResultColor}}"/>
+                    <TextBox Text="{Binding TestResult, Mode=OneWay}" VerticalAlignment="Center" Margin="8,0,0,0"
+                             Foreground="{Binding TestResult, Converter={StaticResource TestResultColor}}"
+                             IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
                 </StackPanel>
 
                 <!-- Error -->
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="#EF4444"
-                           FontSize="12" Margin="0,8,0,0"
-                           Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibility}}"/>
+                <TextBox Text="{Binding ErrorMessage, Mode=OneWay}" Foreground="#EF4444"
+                         FontSize="12" Margin="0,8,0,0"
+                         IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"
+                         Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibility}}"/>
             </StackPanel>
         </ScrollViewer>
 
